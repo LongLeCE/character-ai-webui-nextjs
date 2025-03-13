@@ -1,0 +1,64 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --text-color-dark: black;
+  --text-color-light: #d1d5db;
+  --bg-color-dark: #18181b;
+  --bg-color-light: white;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+	color: var(--text-color-light);
+  font-size: 16px;
+}
+
+body {
+  background-color: var(--bg-color-dark);
+}
+
+h2 {
+  font-size: 1.25rem;
+  font-weight: bold;
+}
+
+@media screen and (max-width: 1680px) {
+  html {
+    font-size: 15px;
+  }
+}
+
+@media screen and (max-width: 1440px) {
+  html {
+    font-size: 14px;
+  }
+}
+
+@media screen and (max-width: 1200px) {
+  html {
+    font-size: 13px;
+  }
+}
+
+@media screen and (max-width: 960px) {
+  html {
+    font-size: 12px;
+  }
+}
+
+@media screen and (max-width: 720px) {
+  html {
+    font-size: 11px;
+  }
+}
+
+@media screen and (max-width: 480px) {
+  html {
+    font-size: 10px;
+  }
+}
