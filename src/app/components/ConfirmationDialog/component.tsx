@@ -3,6 +3,7 @@
 import { useCallback } from 'react';
 import Overlay from '../Overlay/component';
 import { TailwindProps } from '@/app/types';
+import ConfirmationOptions from '../ConfirmationOptions/component';
 
 export default function ConfirmationDialog(
   props: {
@@ -21,17 +22,10 @@ export default function ConfirmationDialog(
     >
       <div className='flex flex-col items-center justify-center gap-y-2'>
         <p>{props.message}</p>
-        <div className='flex items-center justify-end gap-x-2 w-full'>
-          <div onClick={() => props.onResult(false)} className='hover:cursor-pointer'>
-            cancel
-          </div>
-          <div
-            onClick={() => props.onResult(true)}
-            className='hover:cursor-pointer bg-white text-black px-2 py-1 rounded-2xl'
-          >
-            Confirm
-          </div>
-        </div>
+        <ConfirmationOptions
+          onResult={props.onResult}
+          className='flex-row-reverse justify-start w-full'
+        />
       </div>
     </Overlay>
   );

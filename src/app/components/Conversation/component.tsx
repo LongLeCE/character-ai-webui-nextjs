@@ -18,6 +18,7 @@ export default function Conversation(props: { turns: RenderTurn[] }) {
         role={turn.role}
         content={turn.renderedContent}
         name={turn.name}
+        fixed={turn.fixed}
       />
     </Fragment>
   ));

@@ -73,7 +73,7 @@ export default function TurnOptions() {
   }, [turnContext?.id, chatActions?.getHistoryUntil, chatToast?.current?.toast]);
 
   return (
-    <div className='flex flex-col items-center justify-center gap-y-2 size-max'>
+    <div className='flex flex-col items-center justify-center gap-y-1 size-max'>
       {chatState?.generating || turnContext?.role == 'system' ? (
         <></>
       ) : (
@@ -81,7 +81,7 @@ export default function TurnOptions() {
           {turnContext?.isInMemory ? 'Forget this' : 'Remember this'}
         </OptionButton>
       )}
-      {chatState?.generating && !turnContext?.isLast ? (
+      {turnContext?.fixed || (chatState?.generating && !turnContext?.isLast) ? (
         <></>
       ) : (
         <OptionButton onClick={deleteTurnAction}>Delete</OptionButton>

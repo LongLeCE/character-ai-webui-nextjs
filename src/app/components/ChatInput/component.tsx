@@ -59,6 +59,7 @@ export default function ChatInput(props: {
           onChange={onChange}
           placeholder={props.placeholder ?? 'Message...'}
           rows={1}
+          spellCheck={false}
         />
       </div>
       <button

@@ -8,6 +8,7 @@ export type Message = {
 export type Turn = Message & {
   id: string;
   name?: string;
+  fixed?: boolean;
 };
 
 export type TurnRendererProps = Turn & {

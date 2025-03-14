@@ -5,7 +5,7 @@ import Conversation from '../Conversation/component';
 import ChatInput from '../ChatInput/component';
 import ReloadIcon from '@/app/assets/icons/ReloadIcon';
 import StreamingResponse, { markdown2Html } from '../StreamingResponse/component';
-import NavBar from '../NavBar/component';
+// import NavBar from '../NavBar/component';
 import crypto from 'crypto';
 import {
   ChatActions,
@@ -21,14 +21,19 @@ import ToastContainer from '../ToastContainer/component';
 import { ToastContainerImperativeHandle } from '../ToastContainer/types';
 import SideBar from '../SideBar/component';
 import { range } from '@/app/utils/core';
+import { buildChatMessages } from './utils';
+import Character from '@/app/core/character';
+import Persona from '@/app/core/persona';
 
 export default function Chat(props?: {
-  user?: string;
-  assistant?: string;
+  character?: Character;
+  persona?: Persona;
   maxContextTurns?: number;
 }) {
+  const [character, setCharacter] = useState(props?.character);
+  const [persona, setPersona] = useState(props?.persona);
   const [generating, setGenerating] = useState(false);
-  const [responseStream, setResponseStream] = useState('');
+  const [responseStream, setResponseStream] = useState<string | null>(null);
   const [responseGenerated, setResponseGenerated] = useState(false);
   const [userInputComplete, setUserInputComplete] = useState(false);
   const [userInput, setUserInput] = useState('');
@@ -51,13 +56,34 @@ export default function Chat(props?: {
 
   const chatStreamingResponse = {
     controller,
-    setController
+    setController,
+    responseStream,
+    setResponseStream
   };
+
+  const id2Idx = useCallback(() => {
+    const map = new Map<string, number>();
+    turns.forEach((turn, i) => {
+      map.set(turn.id, i);
+    });
+    return map;
+  }, [turns]);
 
   const toMessage = useCallback((turn: Message): Message => {
     return {
       role: turn.role,
       content: turn.content
+    };
+  }, []);
+
+  const makeGreetingTurn = useCallback((greeting: string): RenderTurn => {
+    return {
+      id: makeId(),
+      role: 'assistant',
+      content: greeting,
+      name: character?.name || undefined,
+      renderedContent: markdown2Html(greeting),
+      fixed: true
     };
   }, []);
 
@@ -67,8 +93,7 @@ export default function Chat(props?: {
       role: 'system',
       content: error,
       name: 'Error',
-      renderedContent: markdown2Html(error, 'red'),
-      createdAt: Date.now()
+      renderedContent: markdown2Html(error, 'red')
     };
   }, []);
 
@@ -102,9 +127,10 @@ export default function Chat(props?: {
           for (let i = turns.length - 1; i >= 0; --i) {
             if (turns[i].id === id) {
               const turn = turns[i];
+              const idxMap = id2Idx();
               let insertIdx = 0;
               for (let j = memories.length - 1; j >= 0; --j) {
-                if (turn.createdAt >= memories[j].createdAt) {
+                if ((idxMap.get(turn.id) as number) >= (idxMap.get(memories[j].id) as number)) {
                   insertIdx = j + 1;
                   break;
                 }
@@ -118,7 +144,7 @@ export default function Chat(props?: {
           }
         }
       },
-      [generating, memories, memoryIds]
+      [generating, turns, memories, memoryIds]
     ),
     deleteMemory: useCallback(
       (id: string) => {
@@ -192,35 +218,36 @@ export default function Chat(props?: {
     ),
     getHistory: useCallback(() => {
       const idx = generating ? turns.length - 2 : turns.length - 1;
-      if (idx > 0) {
+      if (idx >= 0) {
         return actions.getHistoryUntil(turns[idx].id);
       }
-    }, [turns]),
-    setHistory: useCallback((messages: Message[]) => {
-      const now = Date.now();
-      if (generating) {
-        controller?.abort();
-        setTurns([...turns.slice(0, turns.length - 1)]);
-      }
-      setMemories([]);
-      setMemoryIds(new Set());
-      setIds(new Set(range(messages.length).map((id) => id.toString())));
-      setTurns(
-        messages.map((message, i) => ({
-          id: i.toString(),
-          role: message.role,
-          content: message.content,
-          name:
-            message.role === 'user'
-              ? props?.user
-              : message.role === 'assistant'
-                ? props?.assistant
-                : undefined,
-          renderedContent: markdown2Html(message.content as string),
-          createdAt: now
-        }))
-      );
-    }, []),
+    }, [generating, turns]),
+    setHistory: useCallback(
+      (messages: Message[]) => {
+        if (generating) {
+          controller?.abort();
+          setTurns([...turns.slice(0, turns.length - 1)]);
+        }
+        setMemories([]);
+        setMemoryIds(new Set());
+        setIds(new Set(range(messages.length).map((id) => id.toString())));
+        setTurns(
+          messages.map((message, i) => ({
+            id: i.toString(),
+            role: message.role,
+            content: message.content,
+            name:
+              message.role === 'user'
+                ? persona?.name || undefined
+                : message.role === 'assistant'
+                  ? character?.name || undefined
+                  : undefined,
+            renderedContent: markdown2Html(message.content as string)
+          }))
+        );
+      },
+      [generating, turns]
+    ),
     setError
   };
 
@@ -238,26 +265,31 @@ export default function Chat(props?: {
   const generate = useCallback(
     (messages: RenderTurn[], appendMessages: Message[] = []) => {
       setGenerating(true);
-      const appendedMessages = (messages as (RenderTurn | Message)[]).concat(appendMessages);
+      const appendedMessages = (messages as Message[]).concat(appendMessages);
       setTurns([
         ...messages,
         {
           id: makeId(),
           role: 'assistant',
           content: null,
-          name: props?.assistant,
+          name: character?.name || undefined,
           renderedContent: (
             <StreamingResponse
               endpoint={
                 process.env.NEXT_PUBLIC_CHAT_ENDPOINT ?? 'http://localhost:8080/v1/chat/completions'
               }
               payload={{
-                messages: (props?.maxContextTurns
-                  ? appendedMessages.slice(
-                      Math.max(0, appendedMessages.length - props?.maxContextTurns)
-                    )
-                  : appendedMessages
-                ).map(toMessage),
+                messages: buildChatMessages(
+                  (props?.maxContextTurns
+                    ? appendedMessages.slice(
+                        Math.max(0, appendedMessages.length - props?.maxContextTurns)
+                      )
+                    : appendedMessages
+                  ).map(toMessage),
+                  character,
+                  persona,
+                  memories
+                ),
                 stream: true
               }}
               chunkHandler={(chunk) =>
@@ -271,15 +303,13 @@ export default function Chat(props?: {
                   })
                   .join('')
               }
-              onUpdate={setResponseStream}
               onComplete={() => setResponseGenerated(true)}
             />
-          ),
-          createdAt: -1
+          )
         }
       ]);
     },
-    [makeId]
+    [makeId, character, persona, memories]
   );
 
   const regenerate = useCallback(() => {
@@ -291,11 +321,15 @@ export default function Chat(props?: {
   useEffect(() => {
     if (responseGenerated) {
       setResponseGenerated(false);
-      const generatedTurn = turns[turns.length - 1];
-      generatedTurn.content = responseStream;
-      generatedTurn.renderedContent = markdown2Html(responseStream, generatedTurn.color);
-      generatedTurn.createdAt = Date.now();
-      setTurns([...turns.slice(0, turns.length - 1), generatedTurn]);
+      if (responseStream !== null) {
+        const generatedTurn = turns[turns.length - 1];
+        generatedTurn.content = responseStream;
+        generatedTurn.renderedContent = markdown2Html(responseStream, generatedTurn.color);
+        setTurns([...turns.slice(0, turns.length - 1), generatedTurn]);
+        setResponseStream(null);
+      } else {
+        setTurns(turns.slice(0, turns.length - 1));
+      }
     }
   }, [responseGenerated]);
 
@@ -310,8 +344,7 @@ export default function Chat(props?: {
             role: 'user',
             content: userInput,
             renderedContent: markdown2Html(userInput),
-            name: props?.user,
-            createdAt: Date.now()
+            name: persona?.name
           }
         ]);
         setUserInput('');
@@ -339,7 +372,13 @@ export default function Chat(props?: {
     ) {
       setGenerating(false);
     }
-  }, [turns, memories]);
+    if (
+      turns.length == 0 ||
+      (turns.length > 0 && error !== null && !isError(turns[turns.length - 1]))
+    ) {
+      setError(null);
+    }
+  }, [turns]);
 
   useEffect(() => {
     if (error !== null) {
@@ -355,15 +394,43 @@ export default function Chat(props?: {
   }, [error]);
 
   useEffect(() => {
-    if (turns.length > 0 && error !== null && !isError(turns[turns.length - 1])) {
-      setError(null);
+    const numTurns = turns.length;
+    const isFistTurnGreeting = numTurns == 0 || (turns[0].fixed && turns[0].role == 'assistant');
+    if (
+      numTurns < 2 &&
+      isFistTurnGreeting &&
+      (numTurns == 0 || character?.greeting != turns[0].content)
+    ) {
+      if (numTurns == 1) {
+        actions.deleteTurn(turns[0].id);
+      }
+      if (character?.greeting) {
+        setTurns([makeGreetingTurn(character.greeting)]);
+      }
     }
-  }, [turns]);
+  }, [character?.greeting, turns]);
+
+  useEffect(() => {
+    setTurns(
+      turns.map((turn) => {
+        return {
+          ...turn,
+          name:
+            turn.role === 'user'
+              ? persona?.name || undefined
+              : turn.role === 'assistant'
+                ? character?.name || undefined
+                : undefined
+        };
+      })
+    );
+  }, [character?.name, persona?.name]);
 
   return (
     <div className='flex flex-col justify-between size-screen'>
-      <NavBar height='3rem' />
-      <div className='flex h-[calc(100%-3rem)]'>
+      {/* <NavBar height='3rem' /> */}
+      {/* <div className='flex h-[calc(100%-3rem)]'> */}
+      <div className='flex h-full'>
         <div className='w-[25%]'></div>
         <ChatState.Provider value={chatState}>
           <ChatStreamingResponse.Provider value={chatStreamingResponse}>
@@ -379,7 +446,10 @@ export default function Chat(props?: {
                     </ChatToast.Provider>
                   </ChatActions.Provider>
                 </ChatWindow.Provider>
-                {!generating && turns.length > 0 && turns[turns.length - 1].role !== 'user' ? (
+                {!generating &&
+                turns.length > 0 &&
+                !turns[turns.length - 1].fixed &&
+                turns[turns.length - 1].role === 'assistant' ? (
                   <button
                     onClick={() => {
                       regenerate();
@@ -405,7 +475,13 @@ export default function Chat(props?: {
         <div className='w-[25%] flex items-center justify-center'>
           <ChatActions.Provider value={actions}>
             <ChatToast.Provider value={toastContainerRef}>
-              <SideBar memories={memories} />
+              <SideBar
+                memories={memories}
+                character={character}
+                persona={persona}
+                onUpdateCharacter={setCharacter}
+                onUpdatePersona={setPersona}
+              />
             </ChatToast.Provider>
           </ChatActions.Provider>
         </div>

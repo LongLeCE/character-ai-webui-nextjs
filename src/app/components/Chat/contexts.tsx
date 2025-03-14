@@ -24,4 +24,6 @@ export const ChatState = createContext<{
 export const ChatStreamingResponse = createContext<{
   controller: AbortController | null;
   setController: Dispatch<SetStateAction<AbortController | null>>;
+  responseStream: string | null;
+  setResponseStream: Dispatch<SetStateAction<string | null>>;
 } | null>(null);
