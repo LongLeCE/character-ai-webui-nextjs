@@ -30,6 +30,13 @@ bun --bun run dev
 
 Open [http://localhost:3000](http://localhost:3000) with your browser to access the webui
 
+If everything works correctly, you should get something like this:
+
+<video width="320" height="240" controls>
+  <source src="/examples/demo.mp4" type="video/mp4">
+  Your browser does not support the video tag.
+</video>
+
 ## FAQs
 
 `How do I setup a local AI chat server?`
