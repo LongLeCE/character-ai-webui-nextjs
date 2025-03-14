@@ -76,26 +76,43 @@ export default function Chat(props?: {
     };
   }, []);
 
-  const makeGreetingTurn = useCallback((greeting: string): RenderTurn => {
-    return {
-      id: makeId(),
-      role: 'assistant',
-      content: greeting,
-      name: character?.name || undefined,
-      renderedContent: markdown2Html(greeting),
-      fixed: true
-    };
-  }, []);
+  const makeId = useCallback(() => {
+    let id = crypto.randomBytes(16).toString('latin1');
+    while (ids.has(id)) {
+      id = crypto.randomBytes(16).toString('latin1');
+    }
+    const newIds = new Set(ids);
+    newIds.add(id);
+    setIds(newIds);
+    return id;
+  }, [ids]);
 
-  const makeErrorTurn = useCallback((error: string, id?: string): RenderTurn => {
-    return {
-      id: id ?? makeId(),
-      role: 'system',
-      content: error,
-      name: 'Error',
-      renderedContent: markdown2Html(error, 'red')
-    };
-  }, []);
+  const makeGreetingTurn = useCallback(
+    (greeting: string): RenderTurn => {
+      return {
+        id: makeId(),
+        role: 'assistant',
+        content: greeting,
+        name: character?.name || undefined,
+        renderedContent: markdown2Html(greeting),
+        fixed: true
+      };
+    },
+    [makeId, character?.name]
+  );
+
+  const makeErrorTurn = useCallback(
+    (error: string, id?: string): RenderTurn => {
+      return {
+        id: id ?? makeId(),
+        role: 'system',
+        content: error,
+        name: 'Error',
+        renderedContent: markdown2Html(error, 'red')
+      };
+    },
+    [makeId]
+  );
 
   const isError = useCallback((turn: Turn): boolean => {
     return turn.role === 'system' && turn.name === 'Error';
@@ -246,21 +263,10 @@ export default function Chat(props?: {
           }))
         );
       },
-      [generating, turns]
+      [generating, turns, persona?.name, character?.name]
     ),
     setError
   };
-
-  const makeId = useCallback(() => {
-    let id = crypto.randomBytes(16).toString('latin1');
-    while (ids.has(id)) {
-      id = crypto.randomBytes(16).toString('latin1');
-    }
-    const newIds = new Set(ids);
-    newIds.add(id);
-    setIds(newIds);
-    return id;
-  }, [ids]);
 
   const generate = useCallback(
     (messages: RenderTurn[], appendMessages: Message[] = []) => {
