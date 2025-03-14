@@ -32,7 +32,7 @@ Open [http://localhost:3000](http://localhost:3000) with your browser to access 
 
 If everything works correctly, you should get something like this:
 
-https://github.com/LongLeCE/character-ai-webui-nextjs/raw/refs/heads/main/examples/demo.mp4
+https://github.com/user-attachments/assets/bf8f06b6-a9a0-4a0c-9086-b433e5134a3a
 
 ## FAQs
 
