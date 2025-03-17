@@ -137,6 +137,52 @@ export default function Chat(props?: {
     [generating, memories, memoryIds]
   );
 
+  const binarySearchIdxMapInner = useCallback(
+    <P extends keyof T, T extends { [K in P]: string }>(
+      sortedArr: T[],
+      key: P,
+      itemIdx: number,
+      key2IdxMap: Map<string, number>,
+      start: number,
+      end: number
+    ): number => {
+      if (end == start) {
+        return 0;
+      }
+      const sliceLength = end - start;
+      const middle = start + (sliceLength >> 1);
+      const middleIdx = key2IdxMap.get(sortedArr[middle][key]) as number;
+      const less = itemIdx < middleIdx;
+      if (sliceLength == 1) {
+        return less ? start : end;
+      }
+      if (less) {
+        return binarySearchIdxMapInner(sortedArr, key, itemIdx, key2IdxMap, start, middle);
+      }
+      return binarySearchIdxMapInner(sortedArr, key, itemIdx, key2IdxMap, middle, end);
+    },
+    []
+  );
+
+  const binarySearchIdxMap = useCallback(
+    <P extends keyof T, T extends { [K in P]: string }>(
+      sortedArr: T[],
+      key: P,
+      item: T,
+      key2IdxMap: Map<string, number>
+    ): number => {
+      return binarySearchIdxMapInner(
+        sortedArr,
+        key,
+        key2IdxMap.get(item[key]) as number,
+        key2IdxMap,
+        0,
+        sortedArr.length
+      );
+    },
+    []
+  );
+
   const actions = {
     addMemory: useCallback(
       (id: string) => {
@@ -145,13 +191,7 @@ export default function Chat(props?: {
             if (turns[i].id === id) {
               const turn = turns[i];
               const idxMap = id2Idx();
-              let insertIdx = 0;
-              for (let j = memories.length - 1; j >= 0; --j) {
-                if ((idxMap.get(turn.id) as number) >= (idxMap.get(memories[j].id) as number)) {
-                  insertIdx = j + 1;
-                  break;
-                }
-              }
+              const insertIdx = binarySearchIdxMap(memories, 'id', turn, idxMap);
               const newMemoryIds = new Set(memoryIds);
               newMemoryIds.add(id);
               setMemoryIds(newMemoryIds);
