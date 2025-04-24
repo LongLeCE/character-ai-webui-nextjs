@@ -10,7 +10,7 @@ export function markdown2Html(markdown: string, color?: string) {
   return (
     <div
       style={color !== undefined ? { color: color } : undefined}
-      className='flex flex-col gap-y-5 [&_li::marker+p]:inline [&_ul]:list-disc [&_ul]:list-outside [&_ul]:flex [&_ul]:flex-col [&_ul]:gap-y-2 [&_ol]:list-decimal [&_ol]:list-outside [&_ol]:flex [&_ol]:flex-col [&_ol]:gap-y-2 [&_li]:ml-5 [&_em]:text-yellow-500 [&_strong]:text-[#ff0000] [&_em_strong]:text-orange-500 [&_strong_em]:text-orange-500'
+      className='flex flex-col gap-y-5 [&_li::marker+p]:inline [&_ul]:list-disc [&_ul]:list-outside [&_ul]:flex [&_ul]:flex-col [&_ul]:gap-y-2 [&_ol]:list-decimal [&_ol]:list-outside [&_ol]:flex [&_ol]:flex-col [&_ol]:gap-y-2 [&_li]:ml-5 [&_pre:has(code)]:overflow-x-scroll [&_pre:has(code)]:bg-black [&_pre:has(code)]:rounded-xl [&_pre:has(code)]:p-2 [&_em]:text-yellow-500 [&_strong]:text-[#ff0000] [&_em_strong]:text-orange-500 [&_strong_em]:text-orange-500'
     >
       <Markdown remarkPlugins={[remarkGfm]}>{`${markdown}`}</Markdown>
     </div>
